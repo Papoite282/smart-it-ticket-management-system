@@ -3,6 +3,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { Ticket } from '../../types/ticket';
 import PriorityBadge from './PriorityBadge';
 import StatusBadge from './StatusBadge';
+import SlaBadge from './SlaBadge';
 
 interface TicketCardProps {
   ticket: Ticket;

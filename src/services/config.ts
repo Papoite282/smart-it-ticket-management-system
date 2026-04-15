@@ -1,4 +1,5 @@
-import { DashboardMetrics, Ticket } from '../types/ticket';
+import { DashboardMetrics, Ticket, TicketAuditEvent } from '../types/ticket';
+import { buildSlaDueAt, getSlaHours, getSlaStatus } from './slaService';
 
 export const appConfig = {
   apiBaseUrl: import.meta.env.VITE_API_BASE_URL?.trim() || '',
@@ -27,5 +28,12 @@ export function normalizeDashboardMetrics(raw: DashboardMetrics): DashboardMetri
     averageResolutionTime: Number(raw.averageResolutionTime ?? 0),
     statusDistribution: raw.statusDistribution ?? [],
     priorityDistribution: raw.priorityDistribution ?? [],
+  };
+}
+
+export function normalizeAuditEvent(raw: TicketAuditEvent): TicketAuditEvent {
+  return {
+    ...raw,
+    createdAt: raw.createdAt,
   };
 }

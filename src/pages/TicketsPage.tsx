@@ -8,7 +8,7 @@ import TicketCard from '../components/tickets/TicketCard';
 import TicketFilters from '../components/tickets/TicketFilters';
 import TicketFormModal from '../components/tickets/TicketFormModal';
 import { useAuth } from '../hooks/useAuth';
-import { useTickets } from '../hooks/useTickets';
+import { useTicketAudit, useTickets } from '../hooks/useTickets';
 import { Ticket, TicketInput } from '../types/ticket';
 
 function TicketsPage() {
@@ -27,6 +27,7 @@ function TicketsPage() {
   const { user, canCreateTickets, canEditTickets, canDeleteTickets } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
+  const auditQuery = useTicketAudit(selectedTicket?.id);
 
   function handleCreateClick() {
     if (!canCreateTickets) {

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
-import { Ticket, TicketInput } from '../../types/ticket';
+﻿import { useEffect, useState } from 'react';
+import { formatDistanceToNow } from 'date-fns';
+import { Ticket, TicketAuditEvent, TicketInput } from '../../types/ticket';
 
 interface TicketFormModalProps {
   isOpen: boolean;
@@ -7,6 +8,8 @@ interface TicketFormModalProps {
   onClose: () => void;
   onSubmit: (payload: TicketInput, ticketId?: string) => Promise<void>;
   isSubmitting?: boolean;
+  auditEvents?: TicketAuditEvent[];
+  isAuditLoading?: boolean;
 }
 
 const defaultState: TicketInput = {
@@ -23,6 +26,8 @@ function TicketFormModal({
   onClose,
   onSubmit,
   isSubmitting = false,
+  auditEvents = [],
+  isAuditLoading = false,
 }: TicketFormModalProps) {
   const [formState, setFormState] = useState<TicketInput>(defaultState);
 
@@ -69,7 +74,7 @@ function TicketFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-coffee-950/45 p-4 backdrop-blur-sm">
-      <div className="glass-panel w-full max-w-2xl rounded-[32px] border border-coffee-400/45 p-6 shadow-card">
+      <div className="glass-panel max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[32px] border border-coffee-400/45 p-6 shadow-card">
         <div className="mb-6">
           <p className="text-xs uppercase tracking-[0.28em] text-coffee-600">
             {isEditMode ? 'Edit Ticket' : 'Create Ticket'}
@@ -145,6 +150,35 @@ function TicketFormModal({
               />
             </label>
           </div>
+
+          {isEditMode ? (
+            <section className="rounded-2xl border border-coffee-400/45 bg-cream-50/70 p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h4 className="text-sm font-semibold text-coffee-950">Activity history</h4>
+                {initialTicket ? (
+                  <span className="rounded-full border border-coffee-400/35 px-2.5 py-1 text-xs text-coffee-600">
+                    SLA {initialTicket.slaHours}h
+                  </span>
+                ) : null}
+              </div>
+              {isAuditLoading ? (
+                <p className="text-sm text-coffee-500">Loading activity...</p>
+              ) : auditEvents.length > 0 ? (
+                <div className="space-y-3">
+                  {auditEvents.map((event) => (
+                    <div key={event.id} className="rounded-xl border border-coffee-400/35 bg-cream-50 px-3 py-2">
+                      <p className="text-sm font-medium text-coffee-900">{event.message}</p>
+                      <p className="mt-1 text-xs text-coffee-500">
+                        {event.actor} · {formatDistanceToNow(new Date(event.createdAt), { addSuffix: true })}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-coffee-500">No activity recorded yet.</p>
+              )}
+            </section>
+          ) : null}
 
           <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
             <button

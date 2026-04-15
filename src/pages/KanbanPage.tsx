@@ -18,7 +18,7 @@ import KanbanColumn from '../components/tickets/KanbanColumn';
 import TicketCard from '../components/tickets/TicketCard';
 import TicketFormModal from '../components/tickets/TicketFormModal';
 import { useAuth } from '../hooks/useAuth';
-import { useTickets } from '../hooks/useTickets';
+import { useTicketAudit, useTickets } from '../hooks/useTickets';
 import { Ticket, TicketInput, TicketStatus } from '../types/ticket';
 
 const columns: Array<{ title: string; status: TicketStatus }> = [
@@ -62,6 +62,7 @@ function KanbanPage() {
   const [activeTicket, setActiveTicket] = useState<Ticket | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const auditQuery = useTicketAudit(selectedTicket?.id);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 

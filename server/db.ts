@@ -1,7 +1,8 @@
-import fs from 'node:fs/promises';
+﻿import fs from 'node:fs/promises';
 import path from 'node:path';
 import initSqlJs, { Database, QueryExecResult, SqlJsStatic, SqlValue } from 'sql.js';
 import { differenceInHours, parseISO } from 'date-fns';
+import { buildSlaDueAt, getSlaHours, getSlaStatus } from './services/sla';
 import { Ticket, TicketStatus, User } from './types';
 
 const dataDir = path.join(process.cwd(), 'server', 'data');
@@ -42,6 +43,18 @@ function buildResolutionTime(createdAt: string, status: TicketStatus, resolvedAt
   return Math.max(1, differenceInHours(parseISO(resolvedAt), parseISO(createdAt)));
 }
 
+function withSla<T extends Omit<Ticket, 'slaHours' | 'slaDueAt' | 'slaStatus'>>(ticket: T): Ticket {
+  const slaHours = getSlaHours(ticket.priority);
+  const slaDueAt = buildSlaDueAt(ticket.createdAt, ticket.priority);
+
+  return {
+    ...ticket,
+    slaHours,
+    slaDueAt,
+    slaStatus: getSlaStatus({ status: ticket.status, resolvedAt: ticket.resolvedAt, slaDueAt }),
+  };
+}
+
 function createSeedTickets(): Ticket[] {
   const ticketOneCreatedAt = new Date(Date.now() - 1000 * 60 * 60 * 18).toISOString();
   const ticketTwoCreatedAt = new Date(Date.now() - 1000 * 60 * 60 * 32).toISOString();
@@ -49,7 +62,7 @@ function createSeedTickets(): Ticket[] {
   const ticketThreeResolvedAt = new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString();
 
   return [
-    {
+    withSla({
       id: crypto.randomUUID(),
       title: 'VPN access failing for remote finance team',
       description: 'Several users report intermittent VPN disconnects during payroll processing.',
@@ -59,8 +72,8 @@ function createSeedTickets(): Ticket[] {
       createdAt: ticketOneCreatedAt,
       updatedAt: new Date(Date.now() - 1000 * 60 * 35).toISOString(),
       resolutionTimeHours: 11,
-    },
-    {
+    }),
+    withSla({
       id: crypto.randomUUID(),
       title: 'Laptop camera driver update',
       description: 'Prepare the latest camera driver package for onboarding devices.',
@@ -70,8 +83,8 @@ function createSeedTickets(): Ticket[] {
       createdAt: ticketTwoCreatedAt,
       updatedAt: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(),
       resolutionTimeHours: 0,
-    },
-    {
+    }),
+    withSla({
       id: crypto.randomUUID(),
       title: 'Urgent email delivery delay in shared mailbox',
       description: 'Messages to support@ are delayed by over 10 minutes and need immediate attention.',
@@ -82,7 +95,7 @@ function createSeedTickets(): Ticket[] {
       updatedAt: ticketThreeResolvedAt,
       resolvedAt: ticketThreeResolvedAt,
       resolutionTimeHours: buildResolutionTime(ticketThreeCreatedAt, 'RESOLVED', ticketThreeResolvedAt),
-    },
+    }),
   ];
 }
 
@@ -109,12 +122,12 @@ async function saveDatabase() {
   await fs.writeFile(databasePath, Buffer.from(db.export()));
 }
 
-function exec(query: string, params: SqlValue[] = []) {
+function exec(queryText: string, params: SqlValue[] = []) {
   if (!db) {
     throw new Error('Database not initialized');
   }
 
-  db.run(query, params);
+  db.run(queryText, params);
 }
 
 function query<T>(queryText: string, params: SqlValue[] = []): T[] {
@@ -135,6 +148,24 @@ function query<T>(queryText: string, params: SqlValue[] = []): T[] {
     });
     return record as T;
   });
+}
+
+function hasColumn(table: string, columnName: string) {
+  return query<{ name: string }>(`PRAGMA table_info(${table})`).some((column) => column.name === columnName);
+}
+
+function migrateTicketSchema() {
+  if (!hasColumn('tickets', 'slaHours')) {
+    exec('ALTER TABLE tickets ADD COLUMN slaHours INTEGER NOT NULL DEFAULT 24');
+  }
+
+  if (!hasColumn('tickets', 'slaDueAt')) {
+    exec("ALTER TABLE tickets ADD COLUMN slaDueAt TEXT NOT NULL DEFAULT ''");
+  }
+
+  if (!hasColumn('tickets', 'slaStatus')) {
+    exec("ALTER TABLE tickets ADD COLUMN slaStatus TEXT NOT NULL DEFAULT 'ON_TRACK'");
+  }
 }
 
 function createSchema() {
@@ -168,7 +199,22 @@ function createSchema() {
       createdAt TEXT NOT NULL,
       updatedAt TEXT NOT NULL,
       resolvedAt TEXT,
-      resolutionTimeHours INTEGER NOT NULL
+      resolutionTimeHours INTEGER NOT NULL,
+      slaHours INTEGER NOT NULL DEFAULT 24,
+      slaDueAt TEXT NOT NULL DEFAULT '',
+      slaStatus TEXT NOT NULL DEFAULT 'ON_TRACK'
+    )
+  `);
+  migrateTicketSchema();
+  exec(`
+    CREATE TABLE IF NOT EXISTS audit_events (
+      id TEXT PRIMARY KEY,
+      ticketId TEXT NOT NULL,
+      actor TEXT NOT NULL,
+      action TEXT NOT NULL,
+      message TEXT NOT NULL,
+      createdAt TEXT NOT NULL,
+      FOREIGN KEY (ticketId) REFERENCES tickets(id) ON DELETE CASCADE
     )
   `);
 }
@@ -192,7 +238,7 @@ async function seedIfNeeded() {
 
   for (const ticket of createSeedTickets()) {
     exec(
-      'INSERT INTO tickets (id, title, description, priority, status, assignee, createdAt, updatedAt, resolvedAt, resolutionTimeHours) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      'INSERT INTO tickets (id, title, description, priority, status, assignee, createdAt, updatedAt, resolvedAt, resolutionTimeHours, slaHours, slaDueAt, slaStatus) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       [
         ticket.id,
         ticket.title,
@@ -204,6 +250,9 @@ async function seedIfNeeded() {
         ticket.updatedAt,
         ticket.resolvedAt ?? null,
         ticket.resolutionTimeHours,
+        ticket.slaHours,
+        ticket.slaDueAt,
+        ticket.slaStatus,
       ],
     );
   }
@@ -233,6 +282,7 @@ export async function initDatabase() {
 export async function resetDatabase() {
   await initDatabase();
   exec('DELETE FROM sessions');
+  exec('DELETE FROM audit_events');
   exec('DELETE FROM tickets');
   exec('DELETE FROM users');
   await saveDatabase();

@@ -8,6 +8,7 @@ import { DashboardMetrics, Ticket, TicketInput } from '../types/ticket';
 
 const TICKETS_QUERY_KEY = ['tickets'];
 const DASHBOARD_QUERY_KEY = ['dashboard-metrics'];
+const TICKET_AUDIT_QUERY_KEY = 'ticket-audit';
 
 interface TicketsMutationContext {
   previousTickets?: Ticket[];
@@ -180,5 +181,12 @@ export function useDashboardMetrics() {
   return useQuery({
     queryKey: DASHBOARD_QUERY_KEY,
     queryFn: () => ticketRepository.getDashboardMetrics(),
+  });
+}
+export function useTicketAudit(ticketId?: string) {
+  return useQuery({
+    queryKey: [TICKET_AUDIT_QUERY_KEY, ticketId],
+    queryFn: () => ticketRepository.getTicketAudit(ticketId!),
+    enabled: Boolean(ticketId),
   });
 }

@@ -7,6 +7,7 @@ import { Ticket } from '../types/ticket';
 
 vi.mock('../hooks/useTickets', () => ({
   useTickets: vi.fn(),
+  useTicketAudit: vi.fn(() => ({ data: [], isLoading: false })),
 }));
 
 import { useTickets } from '../hooks/useTickets';

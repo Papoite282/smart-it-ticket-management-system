@@ -1,6 +1,7 @@
-import { differenceInHours, parseISO } from 'date-fns';
+﻿import { differenceInHours, parseISO } from 'date-fns';
 import { Ticket, TicketInput, TicketStatus } from '../types/ticket';
 import { applyTicketAutomation } from './automationService';
+import { buildSlaDueAt, getSlaHours, getSlaStatus } from './slaService';
 
 function buildResolutionTime(createdAt: string, status: TicketStatus, resolvedAt?: string) {
   if (status !== 'RESOLVED' || !resolvedAt) {
@@ -13,6 +14,7 @@ function buildResolutionTime(createdAt: string, status: TicketStatus, resolvedAt
 export function createOptimisticTicket(payload: TicketInput, now = new Date().toISOString()): Ticket {
   const automatedPayload = applyTicketAutomation(payload);
   const resolvedAt = automatedPayload.status === 'RESOLVED' ? now : undefined;
+  const slaDueAt = buildSlaDueAt(now, automatedPayload.priority);
 
   return {
     id: `temp-${crypto.randomUUID()}`,
@@ -21,12 +23,16 @@ export function createOptimisticTicket(payload: TicketInput, now = new Date().to
     updatedAt: now,
     resolvedAt,
     resolutionTimeHours: buildResolutionTime(now, automatedPayload.status, resolvedAt),
+    slaHours: getSlaHours(automatedPayload.priority),
+    slaDueAt,
+    slaStatus: getSlaStatus({ status: automatedPayload.status, resolvedAt, slaDueAt }),
   };
 }
 
 export function mergeUpdatedTicket(existing: Ticket, payload: TicketInput, now = new Date().toISOString()): Ticket {
   const automatedPayload = applyTicketAutomation(payload);
   const resolvedAt = automatedPayload.status === 'RESOLVED' ? existing.resolvedAt ?? now : undefined;
+  const slaDueAt = buildSlaDueAt(existing.createdAt, automatedPayload.priority);
 
   return {
     ...existing,
@@ -34,6 +40,9 @@ export function mergeUpdatedTicket(existing: Ticket, payload: TicketInput, now =
     updatedAt: now,
     resolvedAt,
     resolutionTimeHours: buildResolutionTime(existing.createdAt, automatedPayload.status, resolvedAt),
+    slaHours: getSlaHours(automatedPayload.priority),
+    slaDueAt,
+    slaStatus: getSlaStatus({ status: automatedPayload.status, resolvedAt, slaDueAt }),
   };
 }
 

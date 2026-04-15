@@ -1,5 +1,6 @@
 export type TicketPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 export type TicketStatus = 'OPEN' | 'IN_PROGRESS' | 'RESOLVED';
+export type TicketSlaStatus = 'ON_TRACK' | 'AT_RISK' | 'BREACHED' | 'MET';
 export type UserRole = 'ADMIN' | 'AGENT' | 'VIEWER';
 
 export interface Ticket {
@@ -13,6 +14,9 @@ export interface Ticket {
   updatedAt: string;
   resolvedAt?: string;
   resolutionTimeHours: number;
+  slaHours: number;
+  slaDueAt: string;
+  slaStatus: TicketSlaStatus;
 }
 
 export interface TicketInput {
@@ -48,4 +52,12 @@ export interface SessionUser {
   email: string;
   role: UserRole;
   avatar: string;
+}
+export interface TicketAuditEvent {
+  id: string;
+  ticketId: string;
+  actor: string;
+  action: 'CREATED' | 'UPDATED' | 'STATUS_CHANGED' | 'DELETED';
+  message: string;
+  createdAt: string;
 }

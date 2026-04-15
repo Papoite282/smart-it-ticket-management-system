@@ -192,6 +192,16 @@ export function createApp() {
     res.json({ data: await store.getTickets() });
   });
 
+
+  app.get('/api/tickets/:id/audit', requireAuth, async (req, res) => {
+    const existing = await store.findTicket(String(req.params.id));
+    if (!existing) {
+      res.status(404).json({ message: 'Ticket not found' });
+      return;
+    }
+
+    res.json({ data: await store.getTicketAudit(String(req.params.id)) });
+  });
   app.post('/api/tickets', requireAuth, requireRole('AGENT'), async (req, res) => {
     const parsed = ticketInputSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -204,7 +214,7 @@ export function createApp() {
       return;
     }
 
-    const ticket = await store.createTicket(parsed.data as TicketInput);
+    const ticket = await store.createTicket(parsed.data as TicketInput, req.user?.name);
     res.status(201).json({ data: ticket });
   });
 
@@ -226,7 +236,7 @@ export function createApp() {
       return;
     }
 
-    const updated = await store.updateTicket(String(req.params.id), parsed.data as TicketInput);
+    const updated = await store.updateTicket(String(req.params.id), parsed.data as TicketInput, req.user?.name);
     res.json({ data: updated });
   });
 
@@ -248,12 +258,12 @@ export function createApp() {
       return;
     }
 
-    const updated = await store.updateTicketStatus(String(req.params.id), parsed.data.status);
+    const updated = await store.updateTicketStatus(String(req.params.id), parsed.data.status, req.user?.name);
     res.json({ data: updated });
   });
 
   app.delete('/api/tickets/:id', requireAuth, requireRole('ADMIN'), async (req, res) => {
-    const deleted = await store.deleteTicket(String(req.params.id));
+    const deleted = await store.deleteTicket(String(req.params.id), req.user?.name);
     if (!deleted) {
       res.status(404).json({ message: 'Ticket not found' });
       return;

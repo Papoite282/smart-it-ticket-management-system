@@ -6,8 +6,9 @@ import {
   Ticket,
   TicketInput,
   TicketStatus,
+  TicketAuditEvent,
 } from '../types/ticket';
-import { appConfig, normalizeDashboardMetrics, normalizeTicket } from './config';
+import { appConfig, normalizeAuditEvent, normalizeDashboardMetrics, normalizeTicket } from './config';
 import { authService } from './authService';
 
 class ApiError extends Error {
@@ -57,6 +58,11 @@ export const apiClient = {
   async getTickets() {
     const response = await request<ApiListResponse<Ticket>>('/tickets');
     return response.data.map(normalizeTicket);
+  },
+
+  async getTicketAudit(ticketId: string) {
+    const response = await request<ApiListResponse<TicketAuditEvent>>(`/tickets/${ticketId}/audit`);
+    return response.data.map(normalizeAuditEvent);
   },
 
   async createTicket(payload: TicketInput) {
