@@ -4,7 +4,7 @@ A production-minded, ServiceNow-inspired IT ticket management system built for m
 
 ## Why This Project Exists
 
-This project was built as an interview-ready technical case study for an IT Service Management context. It shows how a ServiceNow-style incident workflow can be designed with clean separation between UI, state management, business rules, API contracts, permissions, and persistence.
+This project was built as a technical case study for an IT Service Management context. It shows how a ServiceNow-style incident workflow can be designed with clean separation between UI, state management, business rules, API contracts, permissions, and persistence.
 
 ## Highlights
 
