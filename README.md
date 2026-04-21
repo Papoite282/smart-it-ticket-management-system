@@ -180,7 +180,7 @@ The current suite covers:
 
 ## Production Readiness Notes
 
-This project is portfolio/interview-ready and structured for production evolution. Before a real deployment, the next recommended improvements are:
+This project is for portfolio and structured for production evolution. Before a real deployment, the next recommended improvements are:
 
 - Hash passwords instead of storing demo plaintext credentials.
 - Add expiring sessions or JWT refresh-token flow.
@@ -189,14 +189,6 @@ This project is portfolio/interview-ready and structured for production evolutio
 - Move to a server-grade database for multi-user deployment if needed.
 - Add CI/CD with build and test gates.
 
-## Interview Talking Points
-
-- Clean separation of UI, state, services, business rules, and API contracts.
-- Smart automation implemented in a dedicated service layer and mirrored server-side.
-- React Query handles async data, cache invalidation, optimistic updates, and rollback.
-- Zustand is used only for local UI/session state, avoiding overengineering.
-- Backend enforces RBAC, so permissions are not only cosmetic in the UI.
-- Tests validate both frontend behavior and backend contract.
 
 ## License
 

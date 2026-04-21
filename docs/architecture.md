@@ -2,7 +2,7 @@
 
 ## Goal
 
-Build a ServiceNow-inspired IT ticket management system that demonstrates a production-minded architecture while remaining small enough to explain clearly in an interview.
+Build a ServiceNow-inspired IT ticket management system that demonstrates a production-minded architecture while remaining small
 
 ## Frontend Design
 
